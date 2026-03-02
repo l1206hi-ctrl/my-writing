@@ -1,4 +1,5 @@
 import { PROJECT_SAVE_DELAY } from '../constants.js';
+import { findNoteNode, findNoteNodeId } from '../binder.js';
 import { requestText } from '../modal.js';
 import { normalizeDoc, normalizeProjectMeta } from '../normalize.js';
 import { state } from '../state.js';
@@ -45,7 +46,7 @@ function getPreferredParentFolderId() {
 }
 
 async function refreshBinderForNotes(preferredNoteId = null) {
-  const { refreshDocs, findNoteNodeId } = await import('./docs.js');
+  const { refreshDocs } = await import('./docs.js');
   await refreshDocs();
   state.selectedDocId = null;
   if (preferredNoteId) {
@@ -186,7 +187,7 @@ export async function createProjectNote() {
   await saveProjectMeta({ silent: true });
   await refreshBinderForNotes(id);
   if (preferredParentId) {
-    const { findNoteNodeId, moveBinderNode } = await import('./docs.js');
+    const { moveBinderNode } = await import('./docs.js');
     const noteNodeId = findNoteNodeId(id);
     if (noteNodeId) {
       await moveBinderNode(noteNodeId, preferredParentId, null, { silent: true });
@@ -306,18 +307,6 @@ export async function deleteProjectNote(noteId = state.activeProjectNoteId) {
   await refreshBinderForNotes(state.activeProjectNoteId);
   setStatus('Note deleted.');
   return true;
-}
-
-function findNoteNode(noteId) {
-  const target = String(noteId || '').trim();
-  if (!target || !state.binder || !state.binder.nodes) {
-    return null;
-  }
-  return (
-    Object.values(state.binder.nodes).find(
-      (node) => node && node.type === 'note' && node.noteId === target
-    ) || null
-  );
 }
 
 export async function convertProjectNoteToChapter(noteId = state.activeProjectNoteId) {

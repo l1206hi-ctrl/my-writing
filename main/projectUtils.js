@@ -224,45 +224,6 @@ function collectFileItems(projectPath, relDir, items) {
   }
 }
 
-function buildPreview(content, matchIndex) {
-  const lineStart = Math.max(0, content.lastIndexOf('\n', matchIndex) + 1);
-  let lineEnd = content.indexOf('\n', matchIndex);
-  if (lineEnd === -1) {
-    lineEnd = content.length;
-  }
-  let line = content.slice(lineStart, lineEnd).trim();
-  const relative = matchIndex - lineStart;
-  if (line.length > 160) {
-    const sliceStart = Math.max(0, relative - 40);
-    const sliceEnd = Math.min(line.length, sliceStart + 120);
-    let trimmed = line.slice(sliceStart, sliceEnd);
-    if (sliceStart > 0) {
-      trimmed = `...${trimmed}`;
-    }
-    if (sliceEnd < line.length) {
-      trimmed = `${trimmed}...`;
-    }
-    line = trimmed;
-  }
-  return line;
-}
-
-function normalizeContent(value) {
-  return String(value || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-}
-
-function countCharacters(content) {
-  const normalized = normalizeContent(content);
-  return {
-    withSpaces: normalized.length,
-    withoutSpaces: normalized.replace(/\s/g, '').length,
-  };
-}
-
-function countLine(content, index) {
-  return content.slice(0, index).split(/\r?\n/).length;
-}
-
 module.exports = {
   SKIP_DIRS,
   ALLOWED_EXT,
@@ -284,8 +245,4 @@ module.exports = {
   buildTree,
   listProjectTree,
   collectFileItems,
-  buildPreview,
-  normalizeContent,
-  countCharacters,
-  countLine,
 };

@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { DOC_TEMPLATE, STATUS_VALUES } = require('./constants');
+const { countCharacters } = require('./text');
 
 const INDEX_VERSION = 2;
 
@@ -446,14 +447,6 @@ function normalizeProject(meta) {
   }
 
   return { notes: normalized };
-}
-
-function countCharacters(value) {
-  const normalized = String(value || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-  return {
-    withSpaces: normalized.length,
-    withoutSpaces: normalized.replace(/\s/g, '').length,
-  };
 }
 
 function normalizeCharacters(list) {

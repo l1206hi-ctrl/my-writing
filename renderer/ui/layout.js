@@ -187,6 +187,12 @@ export function updateActionState() {
   if (elements.btnHistory) {
     elements.btnHistory.disabled = !hasProject || !state.currentDocId;
   }
+  if (elements.btnExportDoc) {
+    elements.btnExportDoc.disabled = !hasProject;
+  }
+  if (elements.btnExportPdf) {
+    elements.btnExportPdf.disabled = !hasProject;
+  }
   if (elements.btnToggleDocMeta) {
     elements.btnToggleDocMeta.disabled = !hasProject || !state.currentDocId;
   }

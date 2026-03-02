@@ -1,4 +1,5 @@
 import { SEARCH_DELAY } from '../constants.js';
+import { findNoteNodeId } from '../binder.js';
 import { elements } from '../elements.js';
 import { state } from '../state.js';
 import {
@@ -10,7 +11,7 @@ import {
   renderProjectNotes,
   setStatus,
 } from '../ui.js';
-import { findNoteNodeId, loadDoc } from './docs.js';
+import { loadDoc } from './docs.js';
 
 let globalSearchTimer = null;
 const LOCAL_FIND_LIMIT = 400;

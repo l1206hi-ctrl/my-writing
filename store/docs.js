@@ -168,6 +168,7 @@ async function listDocs(projectPath) {
       status: doc.status,
       pinned: Boolean(doc.pinned),
       pov: doc.pov,
+      text: doc.text,
     });
   }
 

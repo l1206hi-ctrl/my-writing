@@ -1,8 +1,9 @@
 import { AUTO_SAVE_DELAY } from '../constants.js';
+import { findDocNodeId, findNoteNodeId } from '../binder.js';
 import { elements } from '../elements.js';
 import { requestText } from '../modal.js';
 import { normalizeDoc, normalizeProjectMeta } from '../normalize.js';
-import { state } from '../state.js';
+import { resetProjectState, state } from '../state.js';
 import {
   clearLastDoc,
   clearLastProject,
@@ -68,11 +69,6 @@ function buildFallbackBinder(docs) {
     order.push(doc.id);
   });
   return { rootIds, nodes, order };
-}
-
-function buildFallbackNoteNodeId(noteId) {
-  const id = String(noteId || '').trim();
-  return id ? `note_${id}` : null;
 }
 
 function normalizeBinderPayload(payload, docs) {
@@ -182,29 +178,7 @@ function cleanupCollapsedFolders() {
   state.collapsedFolderIds = next;
 }
 
-function findDocNodeId(docId) {
-  if (!docId || !state.binder || !state.binder.nodes) {
-    return null;
-  }
-  const node = Object.values(state.binder.nodes).find(
-    (entry) => entry && entry.type === 'doc' && entry.docId === docId
-  );
-  return node ? node.id : null;
-}
-
-export function findNoteNodeId(noteId) {
-  const target = String(noteId || '').trim();
-  if (!target || !state.binder || !state.binder.nodes) {
-    return null;
-  }
-  const node = Object.values(state.binder.nodes).find(
-    (entry) => entry && entry.type === 'note' && entry.noteId === target
-  );
-  if (node) {
-    return node.id;
-  }
-  return buildFallbackNoteNodeId(target);
-}
+export { findNoteNodeId } from '../binder.js';
 
 function expandAncestors(nodeId) {
   let cursorId = nodeId;
@@ -422,34 +396,7 @@ export async function applyProject(project, statusMessage) {
     return;
   }
   setMobilePreviewVisible(false);
-  state.projectPath = project.path;
-  state.projectName = project.name;
-  state.docs = [];
-  state.binder = { rootIds: [], nodes: {}, order: [] };
-  state.currentDocId = null;
-  state.currentDoc = null;
-  state.selectedDocId = null;
-  state.selectedBinderNodeId = null;
-  state.collapsedFolderIds = new Set();
-  state.chapterFilterQuery = '';
-  state.binderPinnedOnly = false;
-  state.localFindQuery = '';
-  state.localFindResults = [];
-  state.globalSearchQuery = '';
-  state.globalSearchResults = [];
-  state.docStats = new Map();
-  state.totalCounts = { withSpaces: 0, withoutSpaces: 0 };
-  state.currentCounts = { withSpaces: 0, withoutSpaces: 0 };
-  state.selectionCounts = { withSpaces: 0, withoutSpaces: 0 };
-  state.selectionActive = false;
-  state.boardQuery = '';
-  state.boardStatusFilter = 'all';
-  state.boardMissingSynopsisOnly = false;
-  state.focusMode = false;
-  state.projectMeta = null;
-  state.openProjectNoteId = null;
-  state.activeProjectNoteId = null;
-  state.historyEntries = [];
+  resetProjectState(project);
   elements.searchInput.value = '';
   if (elements.localFindInput) {
     elements.localFindInput.value = '';
@@ -462,7 +409,6 @@ export async function applyProject(project, statusMessage) {
   }
   clearDocUI();
   clearProjectMetaUI();
-  state.characterFormId = null;
   clearCharacterFormUI();
   setDirty(false);
   updateProjectInfo();

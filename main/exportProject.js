@@ -33,8 +33,12 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
+function normalizeText(value) {
+  return String(value || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+}
+
 function buildParagraphs(value) {
-  const text = String(value || '').trim();
+  const text = normalizeText(value).trim();
   if (!text) {
     return '<p class="empty">(No content)</p>';
   }
@@ -57,6 +61,9 @@ function buildDocSection(doc, index) {
   if (doc.synopsis) {
     headerMeta.push(`Synopsis: ${escapeHtml(doc.synopsis)}`);
   }
+  const metaHtml = headerMeta.length
+    ? `<p class="chapter-meta">${headerMeta.join(' | ')}</p>`
+    : '';
 
   return `
     <section class="chapter">
@@ -64,7 +71,7 @@ function buildDocSection(doc, index) {
         <div class="chapter-index">Chapter ${index + 1}</div>
         <div>
           <h2>${escapeHtml(doc.title || `Untitled chapter ${index + 1}`)}</h2>
-          <p class="chapter-meta">${headerMeta.join(' • ')}</p>
+          ${metaHtml}
         </div>
       </header>
       <div class="chapter-content">

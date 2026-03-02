@@ -1,19 +1,10 @@
 import { elements } from '../elements.js';
 import { formatCountPair } from '../format.js';
+import { findDocNodeId } from '../binder.js';
 import { state } from '../state.js';
 import { getCountsForDoc } from './counts.js';
 import { updateCurrentDocLabel } from './layout.js';
 import { renderMobilePreview } from './mobile.js';
-
-function getDocNodeId(docId) {
-  if (!docId || !state.binder || !state.binder.nodes) {
-    return null;
-  }
-  const node = Object.values(state.binder.nodes).find(
-    (entry) => entry && entry.type === 'doc' && entry.docId === docId
-  );
-  return node ? node.id : null;
-}
 
 function getDocMap() {
   return new Map(state.docs.map((doc) => [doc.id, doc]));
@@ -183,7 +174,7 @@ function renderFilteredDocList(query) {
     const item = document.createElement('li');
     item.className = 'file-item';
     if (entry.type === 'doc') {
-      appendDocRow(item, entry.doc, getDocNodeId(entry.doc.id), 0, rowIndex);
+      appendDocRow(item, entry.doc, findDocNodeId(entry.doc.id), 0, rowIndex);
     } else {
       appendNoteRow(item, entry.node, 0, rowIndex);
     }
@@ -345,8 +336,9 @@ export function updateDocSummaryFromCurrent() {
     entry.status = state.currentDoc.status;
     entry.pinned = Boolean(state.currentDoc.pinned);
     entry.pov = state.currentDoc.pov;
+    entry.text = state.currentDoc.text;
   }
-  const nodeId = getDocNodeId(state.currentDocId);
+  const nodeId = findDocNodeId(state.currentDocId);
   if (nodeId && state.binder.nodes[nodeId]) {
     state.binder.nodes[nodeId].title = state.currentDoc.title;
     state.binder.nodes[nodeId].synopsis = state.currentDoc.synopsis;
@@ -519,7 +511,7 @@ export function renderBoard() {
     card.setAttribute('draggable', hasFilters ? 'false' : 'true');
     card.classList.toggle('reorder-locked', hasFilters);
     card.dataset.id = doc.id;
-    const docNodeId = getDocNodeId(doc.id);
+    const docNodeId = findDocNodeId(doc.id);
     const binderNode = docNodeId ? state.binder.nodes[docNodeId] : null;
     card.dataset.nodeId = docNodeId || '';
     card.dataset.parentId = binderNode && binderNode.parentId ? binderNode.parentId : '';

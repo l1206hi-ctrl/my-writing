@@ -1,36 +1,10 @@
 const path = require('path');
 const { getStoreDir } = require('./paths');
 const { readIndex, readDocFile, readProject } = require('./io');
-
-function buildPreview(content, matchIndex) {
-  const lineStart = Math.max(0, content.lastIndexOf('\n', matchIndex) + 1);
-  let lineEnd = content.indexOf('\n', matchIndex);
-  if (lineEnd === -1) {
-    lineEnd = content.length;
-  }
-  let line = content.slice(lineStart, lineEnd).trim();
-  const relative = matchIndex - lineStart;
-  if (line.length > 160) {
-    const sliceStart = Math.max(0, relative - 40);
-    const sliceEnd = Math.min(line.length, sliceStart + 120);
-    let trimmed = line.slice(sliceStart, sliceEnd);
-    if (sliceStart > 0) {
-      trimmed = `...${trimmed}`;
-    }
-    if (sliceEnd < line.length) {
-      trimmed = `${trimmed}...`;
-    }
-    line = trimmed;
-  }
-  return line;
-}
-
-function countLine(content, index) {
-  return content.slice(0, index).split(/\r?\n/).length;
-}
+const { buildPreview, countLine, normalizeContent } = require('./text');
 
 function pushMatches(results, { id, title, field, content, type = 'doc' }, keywordLower) {
-  const text = String(content || '').replace(/\r/g, '');
+  const text = normalizeContent(content);
   const lowerText = text.toLowerCase();
   let indexMatch = lowerText.indexOf(keywordLower);
   while (indexMatch !== -1) {
@@ -66,7 +40,7 @@ async function searchDocs(projectPath, query) {
     }
     const filePath = path.join(getStoreDir(projectPath), entry.file);
     const doc = await readDocFile(filePath);
-    const text = String(doc.text || '').replace(/\r/g, '');
+    const text = normalizeContent(doc.text);
     const lowerText = text.toLowerCase();
     let indexMatch = lowerText.indexOf(lower);
     while (indexMatch !== -1) {
