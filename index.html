@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Inkfold</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true"></div>
+          <div class="brand-text">
+            <h1 class="title">Inkfold</h1>
+            <p class="subtitle">Local writing studio</p>
+          </div>
+        </div>
+        <div class="actions">
+          <button id="btnNewProject" class="ghost" type="button">New Project</button>
+          <button id="btnOpenProject" class="ghost" type="button">Open Project</button>
+          <button id="btnNewFile" type="button">New Chapter</button>
+          <button id="btnFocus" class="ghost" type="button">Focus</button>
+          <button id="btnFindInChapter" class="ghost" type="button">Find in Chapter</button>
+          <button id="btnGlobalSearch" class="ghost" type="button">Global Search</button>
+          <button id="btnToggleBoard" class="ghost" type="button">Board</button>
+          <button id="btnHistory" class="ghost" type="button">History</button>
+          <button id="btnSave" class="accent" type="button">Save</button>
+        </div>
+      </header>
+
+      <div class="workspace">
+        <aside class="sidebar">
+          <div class="panel">
+            <h2 class="panel-title">Project</h2>
+            <div id="projectName" class="panel-value">No project loaded</div>
+            <div id="projectPath" class="panel-path">Select or create a folder</div>
+          </div>
+
+          <div class="panel chapters-panel">
+            <div class="panel-header">
+              <div class="panel-title-row">
+                <h2 class="panel-title">Binder</h2>
+                <button id="btnBinderPinnedOnly" class="mini ghost" type="button">Pin</button>
+              </div>
+              <div class="panel-actions">
+                <button id="btnNewFolder" class="mini ghost" type="button">New Folder</button>
+                <button id="btnNewNote" class="mini ghost" type="button">New Note</button>
+              </div>
+            </div>
+            <input
+              id="searchInput"
+              class="search-input"
+              type="search"
+              placeholder="Filter binder"
+              autocomplete="off"
+            />
+            <div id="chapterScroll" class="chapter-scroll">
+              <ul id="fileList" class="file-list" role="list"></ul>
+            </div>
+          </div>
+
+          <div class="panel project-meta-panel">
+            <div class="panel-header">
+              <h2 class="panel-title">Project Notes</h2>
+              <div class="panel-actions">
+                <button id="btnAddProjectNote" class="mini ghost" type="button">
+                  Add Note
+                </button>
+              </div>
+            </div>
+            <div id="projectNotesList" class="project-notes"></div>
+          </div>
+
+        </aside>
+
+        <main class="editor">
+          <div id="editorHeader" class="editor-header">
+            <div id="currentFile" class="current-file">No chapter selected</div>
+            <div class="editor-controls">
+              <button
+                id="btnToggleDocMeta"
+                class="mini ghost icon-toggle-btn"
+                type="button"
+                aria-label="Hide chapter details"
+                title="Hide chapter details"
+              >
+                >
+              </button>
+              <button id="btnTogglePin" class="mini ghost" type="button">Pin</button>
+              <div class="font-controls" aria-label="Font size">
+                <button id="btnFontSmaller" class="mini" type="button" title="Smaller">
+                  A-
+                </button>
+                <span id="fontSizeLabel" class="font-label">18px</span>
+                <button id="btnFontLarger" class="mini" type="button" title="Larger">
+                  A+
+                </button>
+              </div>
+              <div class="count-panel" aria-label="Character counts">
+                <div class="count-row">
+                  <span class="count-label">Doc</span>
+                  <span id="countWithSpaces" class="count-value">0</span>
+                  <span class="count-sep">/</span>
+                  <span id="countWithoutSpaces" class="count-value">0</span>
+                  <span class="count-hint">with/without</span>
+                </div>
+                <div class="count-row total">
+                  <span class="count-label">Total</span>
+                  <span id="totalWithSpaces" class="count-value">0</span>
+                  <span class="count-sep">/</span>
+                  <span id="totalWithoutSpaces" class="count-value">0</span>
+                  <span class="count-hint">with/without</span>
+                </div>
+                <div id="selectionRow" class="count-row selection">
+                  <span class="count-label">Selection</span>
+                  <span id="selectionWithSpaces" class="count-value">0</span>
+                  <span class="count-sep">/</span>
+                  <span id="selectionWithoutSpaces" class="count-value">0</span>
+                  <span class="count-hint">with/without</span>
+                </div>
+              </div>
+              <div class="status">
+                <span id="statusDot" class="status-dot" aria-hidden="true"></span>
+                <span id="statusText" aria-live="polite" aria-atomic="true">Ready</span>
+              </div>
+            </div>
+          </div>
+          <div id="docMeta" class="doc-meta">
+            <label class="meta-field">
+              <span class="meta-label">Title</span>
+              <input id="docTitle" type="text" placeholder="Chapter title" autocomplete="off" />
+            </label>
+            <label class="meta-field">
+              <span class="meta-label">Synopsis</span>
+              <input id="docSynopsis" type="text" placeholder="One-line summary" autocomplete="off" />
+            </label>
+            <label class="meta-field">
+              <span class="meta-label">Status</span>
+              <select id="docStatus">
+                <option value="draft">draft</option>
+                <option value="revise">revise</option>
+                <option value="done">done</option>
+              </select>
+            </label>
+            <label class="meta-field">
+              <span class="meta-label">POV</span>
+              <input id="docPov" type="text" placeholder="Point of view" autocomplete="off" />
+            </label>
+          </div>
+          <div id="emptyState" class="empty-state">
+            <h2>Start a project</h2>
+            <p>Create a folder-based project and write chapters.</p>
+            <p>Everything stays local, portable, and structured.</p>
+          </div>
+          <div id="editorView" class="editor-view">
+            <div class="editor-split">
+              <div class="editor-pane">
+                <div class="pane-label">Draft</div>
+                <textarea
+                  id="editorText"
+                  placeholder="Start writing..."
+                  spellcheck="true"
+                  aria-label="Draft"
+                ></textarea>
+              </div>
+              <div class="editor-pane notes">
+                <div class="pane-label">Notes</div>
+                <textarea
+                  id="editorNotes"
+                  placeholder="Notes, research, beats..."
+                  spellcheck="true"
+                  aria-label="Notes"
+                ></textarea>
+              </div>
+            </div>
+          </div>
+          <div id="projectNoteView" class="project-note-view hidden">
+            <div class="project-note-header">
+              <div id="projectNoteTitle" class="project-note-title">Project Note</div>
+              <div class="project-note-actions">
+                <button id="btnRenameProjectNote" class="mini ghost" type="button">
+                  Rename
+                </button>
+                <button id="btnDeleteProjectNote" class="mini ghost danger" type="button">
+                  Delete
+                </button>
+              </div>
+            </div>
+            <textarea
+              id="projectNoteEditor"
+              placeholder="Write here..."
+              spellcheck="true"
+            ></textarea>
+          </div>
+          <div id="boardView" class="board-view hidden">
+            <div class="board-toolbar">
+              <div id="boardSummary" class="board-summary">No chapters yet</div>
+              <div class="board-controls">
+                <input
+                  id="boardSearchInput"
+                  class="board-search"
+                  type="search"
+                  placeholder="Search board"
+                  autocomplete="off"
+                />
+                <select id="boardStatusFilter" class="board-select" aria-label="Filter board by status">
+                  <option value="all">All status</option>
+                  <option value="draft">Draft</option>
+                  <option value="revise">Revise</option>
+                  <option value="done">Done</option>
+                </select>
+                <label class="board-toggle">
+                  <input id="boardMissingSynopsisOnly" type="checkbox" />
+                  Missing synopsis
+                </label>
+                <button id="btnBoardResetFilters" class="mini ghost" type="button">Reset</button>
+              </div>
+            </div>
+            <div id="boardGrid" class="board-grid"></div>
+          </div>
+        </main>
+      </div>
+
+      <footer class="statusbar">
+        <div>Ctrl+S Save | Ctrl+F Find | Ctrl+Shift+F Global Search</div>
+        <div id="statusHint" aria-live="polite" aria-atomic="true">No project loaded</div>
+      </footer>
+    </div>
+    <div id="modalOverlay" class="modal hidden" role="dialog" aria-modal="true">
+      <div class="modal-card" role="document">
+        <div id="modalTitle" class="modal-title">Modal</div>
+        <input
+          id="modalInput"
+          class="modal-input"
+          type="text"
+          placeholder=""
+          autocomplete="off"
+        />
+        <div class="modal-actions">
+          <button id="modalCancel" class="ghost" type="button">Cancel</button>
+          <button id="modalConfirm" class="accent" type="button">OK</button>
+        </div>
+      </div>
+    </div>
+    <div id="localFindOverlay" class="modal hidden" role="dialog" aria-modal="true">
+      <div class="modal-card wide" role="document">
+        <div class="modal-title">Find in Current Chapter</div>
+        <input
+          id="localFindInput"
+          class="modal-input"
+          type="search"
+          placeholder="Find in current chapter"
+          autocomplete="off"
+        />
+        <div id="localFindResults" class="search-results global"></div>
+        <div class="modal-actions">
+          <button id="localFindClose" class="ghost" type="button">Close</button>
+        </div>
+      </div>
+    </div>
+    <div id="globalSearchOverlay" class="modal hidden" role="dialog" aria-modal="true">
+      <div class="modal-card wide" role="document">
+        <div class="modal-title">Global Search</div>
+        <input
+          id="globalSearchInput"
+          class="modal-input"
+          type="search"
+          placeholder="Search everywhere"
+          autocomplete="off"
+        />
+        <div id="globalSearchResults" class="search-results global"></div>
+        <div class="modal-actions">
+          <button id="globalSearchClose" class="ghost" type="button">Close</button>
+        </div>
+      </div>
+    </div>
+    <div id="historyOverlay" class="modal hidden" role="dialog" aria-modal="true">
+      <div class="modal-card wide" role="document">
+        <div class="modal-title">History</div>
+        <div id="historyList" class="history-list"></div>
+        <div class="modal-actions">
+          <button id="historyClose" class="ghost" type="button">Close</button>
+        </div>
+      </div>
+    </div>
+    <div id="binderContextMenu" class="binder-context-menu hidden" role="menu" aria-label="Binder actions">
+      <button id="binderMenuRename" class="context-item" type="button" data-action="rename">Rename</button>
+      <button id="binderMenuDelete" class="context-item danger" type="button" data-action="delete">Delete</button>
+      <button id="binderMenuConvert" class="context-item" type="button" data-action="convert">Convert</button>
+    </div>
+    <script type="module" src="renderer.js"></script>
+  </body>
+</html>
+
