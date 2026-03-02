@@ -6,6 +6,9 @@ Electron 기반의 로컬 중심 글쓰기 스튜디오입니다.
 Inkfold is a desktop writing app that treats a local folder as the project itself. It lets you write chapters, organize a binder, manage project notes, search across your work, restore history, and export the whole project from one place.  
 Inkfold는 로컬 폴더 자체를 하나의 프로젝트로 다루는 데스크톱 글쓰기 앱입니다. 챕터 작성, 바인더 정리, 프로젝트 노트 관리, 전체 검색, 히스토리 복원, 프로젝트 내보내기를 한곳에서 처리할 수 있습니다.
 
+For a developer-focused portfolio write-up, see [PORTFOLIO.md](./PORTFOLIO.md).  
+개발자 관점의 포트폴리오 설명은 [PORTFOLIO.md](./PORTFOLIO.md)에서 볼 수 있습니다.
+
 ## Overview | 개요
 
 - Local-folder-based project workflow  
