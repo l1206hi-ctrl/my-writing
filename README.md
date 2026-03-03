@@ -1,242 +1,108 @@
 # Inkfold
 
-Local-first writing studio built with Electron.  
-Electron 기반의 로컬 중심 글쓰기 스튜디오입니다.
+Inkfold는 장편 글쓰기를 위해 만든 **로컬-퍼스트(local-first) 데스크톱 글쓰기 애플리케이션**입니다.  
+Electron 기반으로 제작되었으며, 서버나 클라우드에 의존하지 않고 **프로젝트 폴더 단위로 글을 관리**하는 것을 목표로 합니다.
 
-Inkfold is a desktop writing app that treats a local folder as the project itself. It lets you write chapters, organize a binder, manage project notes, search across your work, restore history, and export the whole project from one place.  
-Inkfold는 로컬 폴더 자체를 하나의 프로젝트로 다루는 데스크톱 글쓰기 앱입니다. 챕터 작성, 바인더 정리, 프로젝트 노트 관리, 전체 검색, 히스토리 복원, 프로젝트 내보내기를 한곳에서 처리할 수 있습니다.
+---
 
-For a developer-focused portfolio write-up, see [PORTFOLIO.md](./PORTFOLIO.md).  
-개발자 관점의 포트폴리오 설명은 [PORTFOLIO.md](./PORTFOLIO.md)에서 볼 수 있습니다.
+## ✨ Features
 
-## Overview | 개요
+- 📁 **Project-based writing**
+  - 글을 하나의 문서가 아닌 프로젝트 폴더 단위로 관리
+  - 챕터, 노트, 메모를 바인더 구조로 정리
 
-- Local-folder-based project workflow  
-  로컬 폴더 기반 프로젝트 작업 방식
-- Binder for chapters, folders, and project notes  
-  챕터, 폴더, 프로젝트 노트를 위한 바인더 구조
-- Split editor for draft and notes  
-  본문과 메모를 분리한 에디터
-- Writing helpers like counts, pinning, and focus mode  
-  글자 수, 핀, 포커스 모드 같은 집필 보조 기능
-- Search within the current chapter and across the whole project  
-  현재 챕터 검색과 프로젝트 전체 검색
-- Board view for chapter status and progress  
-  챕터 상태와 흐름을 확인하는 보드 뷰
-- Document history snapshots and restore  
-  문서 히스토리 저장 및 복원
-- Export to Word-compatible `.doc` and PDF  
-  Word 호환 `.doc` 및 PDF 내보내기
+- 💾 **Local-first storage**
+  - 모든 데이터는 로컬 파일(JSON / Markdown)로 저장
+  - 외부 서버, 계정, 네트워크 연결 없이 사용 가능
 
-## Why Inkfold | 왜 Inkfold인가
+- 🕓 **Version History**
+  - 일정 간격으로 글 상태를 자동 스냅샷으로 저장
+  - 중복 저장 방지 및 히스토리 개수 제한
 
-Inkfold is closer to managing your own project folder than locking your writing into a proprietary document container.  
-Inkfold는 문서를 앱 내부 포맷에 가두기보다, 사용자가 직접 프로젝트 폴더를 관리하는 방식에 더 가깝습니다.
+- 🔍 **Full-text Search**
+  - 프로젝트 전체(챕터, 노트, 메타 정보) 검색
+  - 검색 결과 미리보기 제공
 
-- Your project stays in a local folder, so backup and migration are simple.  
-  프로젝트가 로컬 폴더에 남기 때문에 백업과 이동이 단순합니다.
-- The data structure is straightforward enough for personal use and inspection.  
-  데이터 구조가 비교적 단순해 개인 작업용으로 다루기 쉽습니다.
-- Drafting, notes, organization, search, and export live in one desktop app.  
-  집필, 메모, 정리, 검색, 내보내기 기능이 하나의 데스크톱 앱 안에 모여 있습니다.
+- 📤 **Export**
+  - 작성한 글을 HTML / PDF 형식으로 내보내기
+  - PDF는 Electron의 `printToPDF` 기능 사용
 
-## Features | 주요 기능
+---
 
-### Project Management | 프로젝트 관리
+## 🖼 Screenshots
 
-- Create a new project  
-  새 프로젝트 생성
-- Open an existing project folder  
-  기존 프로젝트 폴더 열기
-- Restore the last opened project automatically  
-  마지막으로 열었던 프로젝트 자동 복원
+> 실제 사용 화면 예시
 
-### Binder | 바인더
+<img width="2328" height="1520" alt="lnkfold mian" src="https://github.com/user-attachments/assets/5b8bd938-c623-461f-b2f1-a10031cb5ecc" />
 
-- Create chapters  
-  챕터 생성
-- Create, rename, and delete folders  
-  폴더 생성, 이름 변경, 삭제
-- Create, rename, and delete project notes  
-  프로젝트 노트 생성, 이름 변경, 삭제
-- Reorder items with drag and drop  
-  드래그 앤 드롭으로 항목 재정렬
-- Filter pinned items only  
-  핀된 항목만 필터링
+---
 
-### Writing | 집필
+## 🏗 Architecture Overview
 
-- Split editing with `Draft` and `Notes`  
-  `Draft`와 `Notes`를 나눈 편집
-- Chapter metadata management  
-  챕터 메타데이터 관리
-- Title  
-  제목
-- Synopsis  
-  시놉시스
-- Status: `draft`, `revise`, `done`  
-  상태: `draft`, `revise`, `done`
-- POV  
-  POV
-- Auto-save and manual save  
-  자동 저장과 수동 저장
-- Font size controls  
-  글꼴 크기 조절
-- Focus mode  
-  포커스 모드
+Inkfold는 Electron의 **Main / Renderer 프로세스 분리 구조**를 따릅니다.
 
-### Search | 검색
+- **Main Process**
+  - 애플리케이션 창 생성 및 수명 관리
+  - 파일 시스템 접근
+  - IPC 핸들러 정의
 
-- Find inside the current chapter  
-  현재 챕터 내부 검색
-- Global search across the project  
-  프로젝트 전체 검색
-- Draft text  
-  본문
-- Notes  
-  메모
-- Title  
-  제목
-- Synopsis  
-  시놉시스
-- POV  
-  POV
-- Project notes  
-  프로젝트 노트
+- **Renderer Process**
+  - 사용자 인터페이스(UI)
+  - 글 편집, 바인더 조작, 검색 등 사용자 상호작용 처리
 
-### Board View | 보드 뷰
+- **Preload**
+  - `contextIsolation` 환경에서 필요한 API만 안전하게 노출
+  - Renderer ↔ Main 간 IPC 통신 담당
 
-- Card-style chapter overview  
-  카드 형태 챕터 보기
-- Filter by status  
-  상태별 필터
-- Search filter  
-  검색 필터
-- Filter chapters missing a synopsis  
-  시놉시스가 없는 챕터만 필터링
+---
 
-### History | 히스토리
+## 📂 Data Structure
 
-- Save document snapshots over time  
-  문서 스냅샷 기록
-- Restore previous versions  
-  이전 버전 복원
-- Keep up to 30 history entries  
-  최대 30개 히스토리 보관
+프로젝트는 일반 폴더 형태로 저장되며, 내부에 전용 관리 폴더를 가집니다.
 
-### Export | 내보내기
+---
 
-- Export as Word-compatible `.doc`  
-  Word 호환 `.doc`로 내보내기
-- Export as PDF  
-  PDF로 내보내기
-- Include project notes in the export  
-  프로젝트 노트 포함 출력
 
-## Project Structure | 프로젝트 구조
+- `index.json` : 바인더 구조 및 문서 순서 관리
+- `history/` : 자동 저장된 버전 스냅샷
+- JSON 기반으로 사람이 직접 열어볼 수 있는 구조
 
-```text
-.
-├─ main/
-├─ renderer/
-├─ store/
-├─ assets/
-├─ index.html
-├─ styles.css
-├─ main.js
-├─ preload.js
-└─ package.json
-```
+---
 
-### Directory Roles | 디렉터리 역할
+## 🛠 Tech Stack
 
-- `main/`
-  - Electron main-process logic
-  - Window creation, IPC registration, export handling
-  - Electron 메인 프로세스 로직
-  - 윈도우 생성, IPC 등록, 내보내기 처리
-- `renderer/`
-  - UI, state management, and event handling
-  - Editor, binder, search, board, and history view logic
-  - UI, 상태 관리, 이벤트 처리
-  - 에디터, 바인더, 검색, 보드, 히스토리 화면 로직
-- `store/`
-  - Project data persistence layer
-  - Documents, project metadata, search, history, and character data
-  - 프로젝트 데이터 저장 계층
-  - 문서, 프로젝트 메타, 검색, 히스토리, 캐릭터 데이터 처리
-- `assets/`
-  - Static resources such as the app icon
-  - 앱 아이콘 같은 정적 리소스
+- **Electron** – 데스크톱 애플리케이션 프레임워크
+- **JavaScript (ES Modules)** – Renderer 로직
+- **Node.js APIs** – 파일 시스템 처리
+- **HTML / CSS** – UI 구성
 
-## Local Storage Format | 로컬 저장 구조
+> UI 라이브러리보다는  
+> **로컬 저장 구조와 실제 글쓰기 워크플로 설계**에 중점을 둔 프로젝트입니다.
 
-Inkfold creates a `._scriv` directory inside the project folder to store internal data.  
-Inkfold는 프로젝트 폴더 안에 `._scriv` 디렉터리를 생성해 내부 데이터를 저장합니다.
+---
 
-```text
-my-project/
-└─ ._scriv/
-   ├─ index.json
-   ├─ project.json
-   ├─ characters.json
-   ├─ history/
-   │  └─ <docId>/
-   │     └─ <timestamp>.json
-   └─ <docId>.json
-```
+## 🎯 Motivation
 
-### Stored Files | 저장 파일
+기존 글쓰기 도구들은 편리하지만,  
+파일 구조가 숨겨져 있거나 클라우드 의존도가 높은 경우가 많았습니다.
 
-- `index.json`
-  - Binder structure, document order, and node mapping
-  - 바인더 구조, 문서 순서, 노드 매핑
-- `project.json`
-  - Project note metadata
-  - 프로젝트 노트 메타데이터
-- `characters.json`
-  - Character data
-  - 캐릭터 데이터
-- `<docId>.json`
-  - Individual chapter data
-  - 개별 챕터 데이터
-- `history/<docId>/<timestamp>.json`
-  - Document history snapshots
-  - 문서 히스토리 스냅샷
+Inkfold는  
+> “글을 하나의 프로젝트 폴더처럼,  
+> 내가 완전히 통제할 수 있었으면 좋겠다”
 
-## Tech Stack | 기술 스택
+라는 개인적인 문제의식에서 출발한 프로젝트입니다.
 
-- Electron
-- Vanilla JavaScript
-- HTML / CSS
-- electron-builder
+---
 
-## Getting Started | 시작하기
+## 🚧 Status
 
-```bash
-npm install
-npm start
-```
+- 개인 학습 및 실사용 목적의 프로젝트
+- 기능 및 구조는 지속적으로 개선 중
 
-## Build | 빌드
+---
 
-```bash
-npm run pack
-npm run dist
-```
+## 📌 Notes
 
-- `npm run pack`
-  - Create a runnable packaged build without an installer
-  - 설치 파일 없이 실행 가능한 패키지 생성
-- `npm run dist`
-  - Create a distributable installer build
-  - 배포용 설치 파일 생성
-
-## Notes | 참고
-
-- All project data is stored in a local folder.  
-  모든 프로젝트 데이터는 로컬 폴더에 저장됩니다.
-- Document auto-save runs after a short delay.  
-  문서 자동 저장은 짧은 지연 후 실행됩니다.
-- History snapshots are rate-limited to avoid excessive duplicate saves.  
-  히스토리 스냅샷은 중복 저장이 과도하게 쌓이지 않도록 간격 제한이 있습니다.
+이 프로젝트는 AI 도구의 도움을 받아 구현 속도를 높였으며,  
+기능 기획, 구조 이해, 통합, 테스트 및 수정은 직접 진행했습니다.  
+학습과 실험을 목적으로 한 개인 프로젝트입니다.
