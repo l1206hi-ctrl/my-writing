@@ -146,11 +146,7 @@ export function bindClickHandlers() {
       state.activeProjectNoteId = null;
       state.viewMode = 'editor';
       updateActionState();
-      if (nodeId) {
-        toggleFolderCollapsed(nodeId);
-      } else {
-        renderDocList();
-      }
+      renderDocList();
       applyViewMode();
       return;
     }

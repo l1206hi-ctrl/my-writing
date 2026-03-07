@@ -18,6 +18,7 @@ function appendFolderRow(item, node, depth, rowIndex) {
   row.dataset.parentId = node.parentId || '';
   row.style.setProperty('--depth', depth);
   row.style.setProperty('--i', rowIndex);
+  row.setAttribute('draggable', 'true');
   if (state.selectedBinderNodeId === node.id && !state.selectedDocId) {
     row.classList.add('active');
   }
@@ -138,28 +139,61 @@ function appendNoteRow(item, node, depth, rowIndex) {
   item.appendChild(row);
 }
 
+function appendRootDropZone(position) {
+  const item = document.createElement('li');
+  item.className = 'file-item root-drop-zone';
+  item.dataset.rootPosition = position;
+  item.setAttribute('aria-hidden', 'true');
+  item.textContent =
+    position === 'top' ? 'Drop here to move to top level (first)' : 'Drop here to move to top level (last)';
+  return item;
+}
+
 function renderFilteredDocList(query) {
   const results = [];
+  const docsById = getDocMap();
 
-  state.docs.forEach((doc) => {
-    const title = String(doc.title || '').toLowerCase();
-    const synopsis = String(doc.synopsis || '').toLowerCase();
-    const pov = String(doc.pov || '').toLowerCase();
-    if (title.includes(query) || synopsis.includes(query) || pov.includes(query)) {
-      results.push({ type: 'doc', doc });
-    }
-  });
-
-  Object.values(state.binder.nodes || {}).forEach((node) => {
-    if (!node || node.type !== 'note') {
+  const visitNode = (nodeId, depth = 0) => {
+    if (!nodeId || !state.binder || !state.binder.nodes) {
       return;
     }
-    const title = String(node.title || '').toLowerCase();
-    if (!title.includes(query)) {
+    const node = state.binder.nodes[nodeId];
+    if (!node) {
       return;
     }
-    results.push({ type: 'note', node });
-  });
+    if (node.type === 'folder') {
+      const title = String(node.title || '').toLowerCase();
+      if (title.includes(query)) {
+        results.push({ type: 'folder', node, depth });
+      }
+      const children = Array.isArray(node.children) ? node.children : [];
+      children.forEach((childId) => visitNode(childId, depth + 1));
+      return;
+    }
+    if (node.type === 'doc') {
+      const doc = docsById.get(node.docId);
+      if (!doc) {
+        return;
+      }
+      const title = String(doc.title || '').toLowerCase();
+      const synopsis = String(doc.synopsis || '').toLowerCase();
+      const pov = String(doc.pov || '').toLowerCase();
+      if (title.includes(query) || synopsis.includes(query) || pov.includes(query)) {
+        results.push({ type: 'doc', doc, nodeId: node.id, depth });
+      }
+      return;
+    }
+    if (node.type === 'note') {
+      const title = String(node.title || '').toLowerCase();
+      if (title.includes(query)) {
+        results.push({ type: 'note', node, depth });
+      }
+    }
+  };
+
+  (Array.isArray(state.binder && state.binder.rootIds) ? state.binder.rootIds : []).forEach(
+    (rootId) => visitNode(rootId, 0)
+  );
 
   if (!results.length) {
     const empty = document.createElement('li');
@@ -173,10 +207,18 @@ function renderFilteredDocList(query) {
   results.forEach((entry) => {
     const item = document.createElement('li');
     item.className = 'file-item';
-    if (entry.type === 'doc') {
-      appendDocRow(item, entry.doc, findDocNodeId(entry.doc.id), 0, rowIndex);
+    if (entry.type === 'folder') {
+      appendFolderRow(item, entry.node, entry.depth || 0, rowIndex);
+    } else if (entry.type === 'doc') {
+      appendDocRow(
+        item,
+        entry.doc,
+        entry.nodeId || findDocNodeId(entry.doc.id),
+        entry.depth || 0,
+        rowIndex
+      );
     } else {
-      appendNoteRow(item, entry.node, 0, rowIndex);
+      appendNoteRow(item, entry.node, entry.depth || 0, rowIndex);
     }
     rowIndex += 1;
     elements.fileList.appendChild(item);
@@ -265,6 +307,7 @@ function renderBinderNode(nodeId, depth, rowCounter, docMap) {
   }
   const item = document.createElement('li');
   item.className = 'file-item';
+  item.dataset.nodeType = node.type || '';
 
   if (node.type === 'folder') {
     appendFolderRow(item, node, depth, rowCounter.value);
@@ -272,16 +315,18 @@ function renderBinderNode(nodeId, depth, rowCounter, docMap) {
     const children = document.createElement('ul');
     children.className = 'file-children';
     const isCollapsed = state.collapsedFolderIds.has(node.id);
-    if (isCollapsed) {
-      item.classList.add('closed');
-    } else {
-      node.children.forEach((childId) => {
-        const child = renderBinderNode(childId, depth + 1, rowCounter, docMap);
-        if (child) {
-          children.appendChild(child);
-        }
-      });
-    }
+    const hasChildFolder = node.children.some((childId) => {
+      const childNode = state.binder.nodes[childId];
+      return childNode && childNode.type === 'folder';
+    });
+    item.classList.toggle('folders-only', isCollapsed && hasChildFolder);
+    item.classList.toggle('closed', isCollapsed && !hasChildFolder);
+    node.children.forEach((childId) => {
+      const child = renderBinderNode(childId, depth + 1, rowCounter, docMap);
+      if (child) {
+        children.appendChild(child);
+      }
+    });
     item.appendChild(children);
     return item;
   }
@@ -351,6 +396,53 @@ export function updateDocSummaryFromCurrent() {
   renderBoard();
 }
 
+function getNodeDepth(nodeId) {
+  const targetId = String(nodeId || '').trim();
+  if (!targetId || !state.binder || !state.binder.nodes) {
+    return 0;
+  }
+  let depth = 0;
+  let cursor = state.binder.nodes[targetId];
+  let guard = 0;
+  while (cursor && cursor.parentId && guard < 200) {
+    const parent = state.binder.nodes[cursor.parentId];
+    if (!parent) {
+      break;
+    }
+    depth += 1;
+    cursor = parent;
+    guard += 1;
+  }
+  return depth;
+}
+
+function getTrailingFolderOwnerId(folderId) {
+  const startId = String(folderId || '').trim();
+  if (!startId || !state.binder || !state.binder.nodes || !state.binder.nodes[startId]) {
+    return null;
+  }
+  let current = state.binder.nodes[startId];
+  let guard = 0;
+  while (current && current.type === 'folder' && guard < 200) {
+    const children = Array.isArray(current.children) ? current.children : [];
+    const folderChildren = children.filter((childId) => {
+      const child = state.binder.nodes[childId];
+      return child && child.type === 'folder';
+    });
+    if (!folderChildren.length) {
+      return current.id;
+    }
+    const nextId = folderChildren[folderChildren.length - 1];
+    const next = state.binder.nodes[nextId];
+    if (!next || next.id === current.id) {
+      return current.id;
+    }
+    current = next;
+    guard += 1;
+  }
+  return startId;
+}
+
 export function renderDocList() {
   elements.fileList.innerHTML = '';
   const query = String(state.chapterFilterQuery || '').trim().toLowerCase();
@@ -374,16 +466,53 @@ export function renderDocList() {
 
   const docMap = getDocMap();
   const rowCounter = { value: 0 };
-  state.binder.rootIds.forEach((nodeId) => {
+  elements.fileList.appendChild(appendRootDropZone('top'));
+  const rootIds = Array.isArray(state.binder.rootIds) ? state.binder.rootIds.slice() : [];
+  let compatibilityOwnerId = null;
+  for (let index = 0; index < rootIds.length; index += 1) {
+    const nodeId = rootIds[index];
     const rootNode = state.binder.nodes[nodeId];
     if (!rootNode) {
-      return;
+      continue;
     }
-    const nodeElement = renderBinderNode(nodeId, 0, rowCounter, docMap);
-    if (nodeElement) {
-      elements.fileList.appendChild(nodeElement);
+
+    if (rootNode.type === 'folder') {
+      const nodeElement = renderBinderNode(nodeId, 0, rowCounter, docMap);
+      if (nodeElement) {
+        elements.fileList.appendChild(nodeElement);
+      }
+      compatibilityOwnerId = getTrailingFolderOwnerId(rootNode.id);
+      continue;
     }
-  });
+
+    let fallbackDepth = 0;
+    if (compatibilityOwnerId && state.binder.nodes[compatibilityOwnerId]) {
+      if (state.collapsedFolderIds.has(compatibilityOwnerId)) {
+        continue;
+      }
+      fallbackDepth = getNodeDepth(compatibilityOwnerId) + 1;
+    }
+
+    const item = document.createElement('li');
+    item.className = 'file-item';
+    item.dataset.nodeType = rootNode.type;
+    if (rootNode.type === 'doc') {
+      const doc = docMap.get(rootNode.docId);
+      if (!doc) {
+        continue;
+      }
+      appendDocRow(item, doc, rootNode.id, fallbackDepth, rowCounter.value);
+      rowCounter.value += 1;
+      elements.fileList.appendChild(item);
+      continue;
+    }
+    if (rootNode.type === 'note') {
+      appendNoteRow(item, rootNode, fallbackDepth, rowCounter.value);
+      rowCounter.value += 1;
+      elements.fileList.appendChild(item);
+    }
+  }
+  elements.fileList.appendChild(appendRootDropZone('bottom'));
 
   if (!elements.fileList.children.length) {
     const empty = document.createElement('li');

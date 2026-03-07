@@ -13,6 +13,13 @@ function getRowFromEvent(event) {
   return event.target.closest('.item-row');
 }
 
+function getRootZoneFromEvent(event) {
+  if (!(event.target instanceof HTMLElement)) {
+    return null;
+  }
+  return event.target.closest('.root-drop-zone');
+}
+
 export function bindDragHandlers() {
   function clearRowDropState(row) {
     if (!row) {
@@ -29,6 +36,11 @@ export function bindDragHandlers() {
     elements.fileList.querySelectorAll('.item-row').forEach((node) => {
       clearRowDropState(node);
     });
+    elements.fileList.querySelectorAll('.root-drop-zone').forEach((node) => {
+      node.classList.remove('drag-over');
+    });
+    elements.fileList.classList.remove('drag-over-root-top');
+    elements.fileList.classList.remove('drag-over-root-bottom');
   }
 
   function getSiblingNodeIds(parentId) {
@@ -45,10 +57,10 @@ export function bindDragHandlers() {
     const ratio = rect.height > 0 ? relativeY / rect.height : 0.5;
     const rowType = row.dataset.type || '';
     if (rowType === 'folder') {
-      if (ratio < 0.25) {
+      if (ratio < 0.35) {
         return 'before';
       }
-      if (ratio > 0.75) {
+      if (ratio > 0.65) {
         return 'after';
       }
       return 'inside';
@@ -69,6 +81,7 @@ export function bindDragHandlers() {
     }
     listDragSource = row;
     row.classList.add('dragging');
+    elements.fileList.classList.add('drag-active');
     if (event.dataTransfer) {
       event.dataTransfer.effectAllowed = 'move';
       event.dataTransfer.setData('text/plain', row.dataset.nodeId || '');
@@ -77,6 +90,15 @@ export function bindDragHandlers() {
 
   elements.fileList.addEventListener('dragover', (event) => {
     if (!listDragSource) {
+      return;
+    }
+    const rootZone = getRootZoneFromEvent(event);
+    if (rootZone) {
+      event.preventDefault();
+      clearListDragOver();
+      rootZone.classList.add('drag-over');
+      const position = rootZone.dataset.rootPosition === 'top' ? 'top' : 'bottom';
+      elements.fileList.classList.add(position === 'top' ? 'drag-over-root-top' : 'drag-over-root-bottom');
       return;
     }
     const row = getRowFromEvent(event);
@@ -97,6 +119,13 @@ export function bindDragHandlers() {
   });
 
   elements.fileList.addEventListener('dragleave', (event) => {
+    const rootZone = getRootZoneFromEvent(event);
+    if (rootZone) {
+      rootZone.classList.remove('drag-over');
+      elements.fileList.classList.remove('drag-over-root-top');
+      elements.fileList.classList.remove('drag-over-root-bottom');
+      return;
+    }
     const row = getRowFromEvent(event);
     if (row) {
       clearRowDropState(row);
@@ -112,16 +141,21 @@ export function bindDragHandlers() {
       return;
     }
 
-    const row = getRowFromEvent(event);
+    let parentId = null;
+    let targetIndex = null;
+    const rootZone = getRootZoneFromEvent(event);
+    const row = rootZone ? null : getRowFromEvent(event);
     if (row && row === listDragSource) {
       event.preventDefault();
       clearListDragOver();
       return;
     }
-    let parentId = null;
-    let targetIndex = null;
 
-    if (row && row !== listDragSource && row.dataset.nodeId) {
+    if (rootZone) {
+      event.preventDefault();
+      parentId = null;
+      targetIndex = rootZone.dataset.rootPosition === 'top' ? 0 : getSiblingNodeIds(null).length;
+    } else if (row && row !== listDragSource && row.dataset.nodeId) {
       const targetType = row.dataset.type || '';
       const targetNodeId = String(row.dataset.nodeId || '').trim();
       const dropPosition = row.dataset.dropPosition || getDropPosition(row, event);
@@ -169,6 +203,7 @@ export function bindDragHandlers() {
       listDragSource.classList.remove('dragging');
     }
     listDragSource = null;
+    elements.fileList.classList.remove('drag-active');
     clearListDragOver();
   });
 

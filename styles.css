@@ -508,6 +508,27 @@ button.danger {
   min-height: 160px;
 }
 
+.root-drop-zone {
+  display: none;
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px dashed rgba(15, 111, 115, 0.35);
+  color: rgba(15, 111, 115, 0.9);
+  background: rgba(15, 111, 115, 0.06);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.file-list.drag-active .root-drop-zone {
+  display: block;
+}
+
+.root-drop-zone.drag-over {
+  border-color: rgba(15, 111, 115, 0.9);
+  background: rgba(15, 111, 115, 0.14);
+}
+
 .file-item {
   display: flex;
   flex-direction: column;
@@ -515,6 +536,11 @@ button.danger {
 }
 
 .file-item.closed > .file-children {
+  display: none;
+}
+
+.file-item.folders-only > .file-children > .file-item[data-node-type="doc"],
+.file-item.folders-only > .file-children > .file-item[data-node-type="note"] {
   display: none;
 }
 
@@ -551,10 +577,15 @@ button.danger {
 
 .item-row.folder-row {
   background: rgba(245, 239, 230, 0.92);
+  padding-left: 10px;
 }
 
 .item-row.folder-row .item-status {
   color: var(--accent-2);
+}
+
+.item-row.folder-row .item-name {
+  margin-left: calc(var(--depth, 0) * 14px);
 }
 
 .item-row.note-row {
