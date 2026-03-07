@@ -67,6 +67,27 @@ export async function loadProjectMeta() {
     const meta = await window.api.readProjectMeta(state.projectPath);
     applyProjectMeta(meta);
   } catch (error) {
+    const isCorruption = String((error && error.message) || '')
+      .toLowerCase()
+      .includes('corrupt');
+    if (isCorruption) {
+      const shouldRecover = window.confirm(
+        'Project notes data seems corrupted.\nAttempt automatic recovery now?\nA backup (*.corrupt-<timestamp>) will be kept.'
+      );
+      if (shouldRecover) {
+        try {
+          await window.api.repairProjectStore(state.projectPath);
+          const meta = await window.api.readProjectMeta(state.projectPath);
+          applyProjectMeta(meta);
+          setStatus('Project notes recovered.');
+          return;
+        } catch (repairError) {
+          setStatus(repairError.message || 'Project notes recovery failed.', true);
+          clearProjectMetaUI();
+          return;
+        }
+      }
+    }
     setStatus(error.message || 'Unable to load project notes.', true);
     clearProjectMetaUI();
   }

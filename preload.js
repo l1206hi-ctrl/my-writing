@@ -31,6 +31,8 @@ contextBridge.exposeInMainWorld('api', {
   readProjectMeta: (projectPath) => ipcRenderer.invoke('project:readMeta', projectPath),
   writeProjectMeta: (projectPath, meta) =>
     ipcRenderer.invoke('project:writeMeta', projectPath, meta),
+  repairProjectStore: (projectPath) =>
+    ipcRenderer.invoke('project:repairStore', projectPath),
   exportProject: (projectPath, format) =>
     ipcRenderer.invoke('project:export', projectPath, format),
   listCharacters: (projectPath) =>

@@ -1,4 +1,5 @@
 const fs = require('fs');
+const path = require('path');
 const { getStoreDir, getIndexPath, getProjectPath, getCharactersPath } = require('./paths');
 const {
   normalizeDoc,
@@ -8,6 +9,42 @@ const {
   backupCorruptFile,
 } = require('./normalize');
 
+const RESERVED_STORE_FILES = new Set(['index.json', 'project.json', 'characters.json']);
+
+function makeTempPath(filePath) {
+  const dir = path.dirname(filePath);
+  const base = path.basename(filePath);
+  const rand = Math.random().toString(16).slice(2, 10);
+  return path.join(dir, `${base}.tmp-${process.pid}-${Date.now()}-${rand}`);
+}
+
+async function writeFileAtomic(filePath, data, encoding = 'utf-8') {
+  const tempPath = makeTempPath(filePath);
+  let wroteTemp = false;
+  try {
+    await fs.promises.writeFile(tempPath, data, encoding);
+    wroteTemp = true;
+    await fs.promises.rename(tempPath, filePath);
+  } catch (error) {
+    if (wroteTemp) {
+      try {
+        await fs.promises.rm(tempPath, { force: true });
+      } catch (_cleanupError) {
+        // Ignore cleanup errors.
+      }
+    }
+    throw error;
+  }
+}
+
+async function writeJsonAtomic(filePath, payload) {
+  await writeFileAtomic(filePath, JSON.stringify(payload, null, 2), 'utf-8');
+}
+
+function makeEmptyIndex() {
+  return normalizeIndex({ order: [], docs: {} });
+}
+
 async function ensureStore(projectPath) {
   if (!projectPath) {
     return;
@@ -16,17 +53,15 @@ async function ensureStore(projectPath) {
   await fs.promises.mkdir(storeDir, { recursive: true });
   const indexPath = getIndexPath(projectPath);
   if (!fs.existsSync(indexPath)) {
-    const index = normalizeIndex({ order: [], docs: {} });
-    await fs.promises.writeFile(indexPath, JSON.stringify(index, null, 2), 'utf-8');
+    await writeJsonAtomic(indexPath, makeEmptyIndex());
   }
   const projectPathFile = getProjectPath(projectPath);
   if (!fs.existsSync(projectPathFile)) {
-    const meta = normalizeProject();
-    await fs.promises.writeFile(projectPathFile, JSON.stringify(meta, null, 2), 'utf-8');
+    await writeJsonAtomic(projectPathFile, normalizeProject());
   }
   const charactersPath = getCharactersPath(projectPath);
   if (!fs.existsSync(charactersPath)) {
-    await fs.promises.writeFile(charactersPath, JSON.stringify([], null, 2), 'utf-8');
+    await writeJsonAtomic(charactersPath, []);
   }
 }
 
@@ -38,7 +73,7 @@ async function readIndex(projectPath) {
     return normalizeIndex(JSON.parse(raw));
   } catch (error) {
     if (error && error.code === 'ENOENT') {
-      return normalizeIndex({ order: [], docs: {} });
+      return makeEmptyIndex();
     }
     if (isJsonSyntaxError(error)) {
       await backupCorruptFile(indexPath);
@@ -51,7 +86,7 @@ async function readIndex(projectPath) {
 async function writeIndex(projectPath, index) {
   const indexPath = getIndexPath(projectPath);
   const payload = normalizeIndex(index);
-  await fs.promises.writeFile(indexPath, JSON.stringify(payload, null, 2), 'utf-8');
+  await writeJsonAtomic(indexPath, payload);
 }
 
 async function readProject(projectPath) {
@@ -76,7 +111,7 @@ async function writeProject(projectPath, meta) {
   await ensureStore(projectPath);
   const metaPath = getProjectPath(projectPath);
   const payload = normalizeProject(meta);
-  await fs.promises.writeFile(metaPath, JSON.stringify(payload, null, 2), 'utf-8');
+  await writeJsonAtomic(metaPath, payload);
   return payload;
 }
 
@@ -101,11 +136,126 @@ async function readDocFile(filePath, options = {}) {
 
 async function writeDocFile(filePath, doc) {
   const normalized = normalizeDoc(doc);
-  await fs.promises.writeFile(filePath, JSON.stringify(normalized, null, 2), 'utf-8');
+  await writeJsonAtomic(filePath, normalized);
   return normalized;
 }
 
+async function isCorruptedJsonFile(filePath) {
+  try {
+    const raw = await fs.promises.readFile(filePath, 'utf-8');
+    JSON.parse(raw);
+    return false;
+  } catch (error) {
+    if (error && error.code === 'ENOENT') {
+      return false;
+    }
+    if (isJsonSyntaxError(error)) {
+      return true;
+    }
+    throw error;
+  }
+}
+
+function createRecoveredDocFromId(docId) {
+  const label = String(docId || 'untitled')
+    .replace(/^doc[_-]?/i, '')
+    .replace(/[_-]+/g, ' ')
+    .trim();
+  const title = label ? `Recovered ${label}` : 'Recovered chapter';
+  return normalizeDoc({ title });
+}
+
+async function listStoreDocFiles(projectPath) {
+  const storeDir = getStoreDir(projectPath);
+  let entries = [];
+  try {
+    entries = await fs.promises.readdir(storeDir, { withFileTypes: true });
+  } catch (error) {
+    return [];
+  }
+  return entries
+    .filter((entry) => entry && entry.isFile() && entry.name.endsWith('.json'))
+    .map((entry) => entry.name)
+    .filter((fileName) => !RESERVED_STORE_FILES.has(fileName))
+    .filter((fileName) => path.extname(fileName).toLowerCase() === '.json');
+}
+
+async function rebuildIndexFromStore(projectPath) {
+  const files = await listStoreDocFiles(projectPath);
+  const docs = {};
+  const nodes = {};
+  const rootIds = [];
+  files
+    .slice()
+    .sort((a, b) => a.localeCompare(b))
+    .forEach((fileName) => {
+      const docId = path.basename(fileName, '.json');
+      if (!docId) {
+        return;
+      }
+      docs[docId] = { id: docId, file: fileName };
+      let nodeId = docId;
+      let attempt = 1;
+      while (nodes[nodeId]) {
+        nodeId = `${docId}_${attempt}`;
+        attempt += 1;
+      }
+      nodes[nodeId] = {
+        id: nodeId,
+        type: 'doc',
+        docId,
+        parentId: null,
+      };
+      rootIds.push(nodeId);
+    });
+  return normalizeIndex({ docs, nodes, rootIds });
+}
+
+async function repairStore(projectPath) {
+  await ensureStore(projectPath);
+  const repaired = [];
+
+  const indexPath = getIndexPath(projectPath);
+  if (await isCorruptedJsonFile(indexPath)) {
+    await backupCorruptFile(indexPath);
+    const rebuilt = await rebuildIndexFromStore(projectPath);
+    await writeJsonAtomic(indexPath, rebuilt);
+    repaired.push('index.json');
+  }
+
+  const projectMetaPath = getProjectPath(projectPath);
+  if (await isCorruptedJsonFile(projectMetaPath)) {
+    await backupCorruptFile(projectMetaPath);
+    await writeJsonAtomic(projectMetaPath, normalizeProject());
+    repaired.push('project.json');
+  }
+
+  const charactersPath = getCharactersPath(projectPath);
+  if (await isCorruptedJsonFile(charactersPath)) {
+    await backupCorruptFile(charactersPath);
+    await writeJsonAtomic(charactersPath, []);
+    repaired.push('characters.json');
+  }
+
+  const storeDir = getStoreDir(projectPath);
+  const docFiles = await listStoreDocFiles(projectPath);
+  for (const fileName of docFiles) {
+    const filePath = path.join(storeDir, fileName);
+    if (!(await isCorruptedJsonFile(filePath))) {
+      continue;
+    }
+    await backupCorruptFile(filePath);
+    const docId = path.basename(fileName, '.json');
+    await writeJsonAtomic(filePath, createRecoveredDocFromId(docId));
+    repaired.push(fileName);
+  }
+
+  return { repaired };
+}
+
 module.exports = {
+  writeFileAtomic,
+  writeJsonAtomic,
   ensureStore,
   readIndex,
   writeIndex,
@@ -113,4 +263,5 @@ module.exports = {
   writeProject,
   readDocFile,
   writeDocFile,
+  repairStore,
 };

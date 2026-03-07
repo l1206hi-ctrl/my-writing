@@ -39,6 +39,7 @@ import { loadProjectMeta } from './projectNotes.js';
 
 let autoSaveTimer = null;
 let saveQueue = Promise.resolve();
+let storeRecoveryInProgress = false;
 
 function queueSave(task) {
   saveQueue = saveQueue.then(() => task(), () => task());
@@ -256,6 +257,37 @@ function createUniqueNoteId(meta) {
   return id;
 }
 
+function isCorruptionError(error) {
+  const message = String((error && error.message) || '').toLowerCase();
+  return message.includes('corrupt');
+}
+
+async function tryRecoverProjectStore() {
+  if (!state.projectPath || storeRecoveryInProgress) {
+    return false;
+  }
+  const shouldRecover = window.confirm(
+    'Project data seems corrupted.\nAttempt automatic recovery now?\nA backup (*.corrupt-<timestamp>) will be kept.'
+  );
+  if (!shouldRecover) {
+    return false;
+  }
+  storeRecoveryInProgress = true;
+  setStatus('Recovering project data...');
+  try {
+    const result = await window.api.repairProjectStore(state.projectPath);
+    const repaired = result && Array.isArray(result.repaired) ? result.repaired : [];
+    const suffix = repaired.length === 1 ? '' : 's';
+    setStatus(`Recovery complete (${repaired.length} file${suffix} repaired).`);
+    return true;
+  } catch (error) {
+    setStatus(error.message || 'Recovery failed.', true);
+    return false;
+  } finally {
+    storeRecoveryInProgress = false;
+  }
+}
+
 export function scheduleAutoSave() {
   if (!state.currentDocId) {
     return;
@@ -311,15 +343,22 @@ export async function saveDoc(options = {}) {
   });
 }
 
-export async function refreshDocs() {
+export async function refreshDocs(options = {}) {
   if (!state.projectPath) {
     return;
   }
+  const allowRecovery = options.allowRecovery !== false;
   let docs = [];
   try {
     const nextDocs = await window.api.listDocs(state.projectPath);
     docs = Array.isArray(nextDocs) ? nextDocs : [];
   } catch (error) {
+    if (allowRecovery && isCorruptionError(error)) {
+      const recovered = await tryRecoverProjectStore();
+      if (recovered) {
+        return refreshDocs({ allowRecovery: false });
+      }
+    }
     state.docs = [];
     state.binder = { rootIds: [], nodes: {}, order: [] };
     state.selectedBinderNodeId = null;
@@ -445,6 +484,16 @@ export async function loadDoc(docId, options = {}) {
   try {
     doc = await window.api.readDoc(state.projectPath, docId);
   } catch (error) {
+    if (options.allowRecovery !== false && isCorruptionError(error)) {
+      const recovered = await tryRecoverProjectStore();
+      if (recovered) {
+        return loadDoc(docId, {
+          ...options,
+          allowRecovery: false,
+          statusMessage: options.statusMessage || 'Loaded after recovery.',
+        });
+      }
+    }
     setStatus(error.message || 'Unable to load chapter.', true);
     return false;
   }

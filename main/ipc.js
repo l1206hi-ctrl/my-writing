@@ -187,6 +187,13 @@ function registerIpcHandlers() {
     return store.writeProject(projectPath, meta);
   });
 
+  ipcMain.handle('project:repairStore', async (_event, projectPath) => {
+    if (!projectPath) {
+      return { repaired: [] };
+    }
+    return store.repairStore(projectPath);
+  });
+
   ipcMain.handle('project:export', async (_event, projectPath, format) => {
     if (!projectPath) {
       return null;

@@ -3,7 +3,7 @@ const path = require('path');
 const { HISTORY_LIMIT, HISTORY_INTERVAL } = require('./constants');
 const { getHistoryDir, getStoreDir } = require('./paths');
 const { normalizeDoc } = require('./normalize');
-const { readIndex, writeDocFile } = require('./io');
+const { readIndex, writeDocFile, writeJsonAtomic } = require('./io');
 
 async function listHistoryEntries(historyDir) {
   if (!fs.existsSync(historyDir)) {
@@ -44,7 +44,7 @@ async function maybeSaveHistorySnapshot(projectPath, docId, doc, options = {}) {
   }
   const stamp = String(now);
   const filePath = path.join(historyDir, `${stamp}.json`);
-  await fs.promises.writeFile(filePath, JSON.stringify(payload, null, 2), 'utf-8');
+  await writeJsonAtomic(filePath, payload);
   const updated = await listHistoryEntries(historyDir);
   if (updated.length > HISTORY_LIMIT) {
     const overflow = updated.slice(HISTORY_LIMIT);

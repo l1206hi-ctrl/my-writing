@@ -1,4 +1,4 @@
-const { ensureStore, readProject, writeProject } = require('./io');
+const { ensureStore, readProject, writeProject, repairStore } = require('./io');
 const {
   listDocs,
   listBinder,
@@ -40,6 +40,7 @@ module.exports = {
   searchGlobal,
   readProject,
   writeProject,
+  repairStore,
   listHistory,
   restoreHistory,
   readCharacters,

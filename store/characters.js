@@ -1,6 +1,6 @@
 const fs = require('fs');
 const { getCharactersPath } = require('./paths');
-const { ensureStore } = require('./io');
+const { ensureStore, writeJsonAtomic } = require('./io');
 const { normalizeCharacters, isJsonSyntaxError, backupCorruptFile } = require('./normalize');
 
 async function readCharacters(projectPath) {
@@ -31,7 +31,7 @@ async function writeCharacters(projectPath, characters) {
   await ensureStore(projectPath);
   const filePath = getCharactersPath(projectPath);
   const normalized = normalizeCharacters(characters);
-  await fs.promises.writeFile(filePath, JSON.stringify(normalized, null, 2), 'utf-8');
+  await writeJsonAtomic(filePath, normalized);
   return normalized;
 }
 
