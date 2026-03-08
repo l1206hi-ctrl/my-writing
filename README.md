@@ -5,6 +5,15 @@ Electron 기반으로 제작되었으며, 서버나 클라우드에 의존하지
 
 ---
 
+## Releases
+
+Latest version: **v0.1.1**
+
+See the release page for details:  
+https://github.com/l1206hi-ctrl/my-writing/releases
+
+---
+
 ## ✨ Features
 
 - 📁 **Project-based writing**
